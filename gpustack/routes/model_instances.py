@@ -96,7 +96,7 @@ async def get_serving_logs(
                 if resp.status != 200:
                     raise HTTPException(
                         status_code=resp.status,
-                        detail="Error fetching serving logs",
+                        detail=f"Error fetching serving logs: {resp.reason}",
                     )
                 async for chunk in resp.content.iter_any():
                     yield chunk
@@ -107,7 +107,7 @@ async def get_serving_logs(
             if resp.status != 200:
                 raise HTTPException(
                     status_code=resp.status,
-                    detail="Error fetching serving logs",
+                    detail=f"Error fetching serving logs: {resp.reason}",
                 )
             return PlainTextResponse(content=await resp.text(), status_code=resp.status)
 
