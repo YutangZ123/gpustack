@@ -19,7 +19,6 @@ from gpustack.schemas.models import (
     ModelInstancesPublic,
 )
 
-
 router = APIRouter()
 
 
@@ -89,29 +88,46 @@ async def get_serving_logs(
     timeout = aiohttp.ClientTimeout(total=5 * 60, sock_connect=5)
     client: aiohttp.ClientSession = request.app.state.http_client
 
-    if log_options.follow:
-
-        async def proxy_stream():
+    
+    try:
+        if log_options.follow:
+            async def proxy_stream():
+                async with client.get(model_instance_log_url, timeout=timeout) as resp:
+                    if resp.status == 400:
+                        raise HTTPException(message= "Logs not found on the worker")
+                    if resp.status == 500:
+                        raise InternalServerErrorException(message="Worker encountered an internal error")                        
+                    if resp.status!=200:
+                            raise HTTPException(
+                        status_code=resp.status,
+                        detail=f"Unexpected error while fetching logs: {resp.reason}",
+                    )
+                    async for chunk in resp.content.iter_any():
+                        yield chunk
+                return StreamingResponse(proxy_stream(), media_type="application/octet-stream")
+        else:
             async with client.get(model_instance_log_url, timeout=timeout) as resp:
+                if resp.status == 404:
+                    raise NotFoundException(message="Logs not found on the worker")
+                if resp.status == 500:
+                    raise InternalServerErrorException(message="Worker encountered an internal error")
                 if resp.status != 200:
                     raise HTTPException(
                         status_code=resp.status,
-                        detail="Error fetching serving logs",
+                        detail=f"Unexpected error while fetching logs: {resp.reason}",
                     )
-                async for chunk in resp.content.iter_any():
-                    yield chunk
-
-        return StreamingResponse(proxy_stream(), media_type="application/octet-stream")
-    else:
-        async with client.get(model_instance_log_url, timeout=timeout) as resp:
-            if resp.status != 200:
-                raise HTTPException(
-                    status_code=resp.status,
-                    detail="Error fetching serving logs",
-                )
-            return PlainTextResponse(content=await resp.text(), status_code=resp.status)
-
-
+                return PlainTextResponse(content=await resp.text(), status_code=resp.status)
+    except aiohttp.ClientConnectionError:
+        raise HTTPException(
+            status_code=503,
+            detail="Worker is unreachable. Check the network connection or worker status."
+        )
+    except aiohttp.ClientError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error communicating with the worker: {str(e)}"
+        )
+        
 @router.post("", response_model=ModelInstancePublic)
 async def create_model_instance(
     session: SessionDep, model_instance_in: ModelInstanceCreate
@@ -136,6 +152,7 @@ async def update_model_instance(
 
     try:
         await model_instance.update(session, model_instance_in)
+
     except Exception as e:
         raise InternalServerErrorException(
             message=f"Failed to update model instance: {e}"
