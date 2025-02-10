@@ -117,7 +117,7 @@ class Config(BaseSettings):
         self.init_database_url()
 
         if self.system_reserved is None:
-            self.system_reserved = {"ram": 2, "vram": 0}
+            self.system_reserved = {"ram": 2, "vram": 1}
 
     @model_validator(mode="after")
     def check_all(self):
@@ -180,7 +180,7 @@ class Config(BaseSettings):
 
             if vendor not in VendorEnum.__members__.values():
                 raise Exception(
-                    "Unsupported GPU device vendor, supported vendors are: Apple, NVIDIA, 'Moore Threads', Huawei, AMD"
+                    "Unsupported GPU device vendor, supported vendors are: Apple, NVIDIA, 'Moore Threads', Huawei, AMD, Hygon"
                 )
 
             if not memory:
