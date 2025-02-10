@@ -647,7 +647,7 @@ install_gpustack() {
   # Workaround for issue #581
   pipx inject gpustack pydantic==2.9.2 --force > /dev/null 2>&1
 
-  # audio dependencies for macOS
+ # audio dependencies for macOS
   if [ "$INSTALL_SKIP_BUILD_DEPENDENCIES" != "1" ] && [ "$OS" = "macos" ]; then
     # Check current installed versions
     NEED_VERSION=$(brew list --versions | grep "$BREW_APP_OPENFST_NAME" | grep "$BREW_APP_OPENFST_VERSION" | cut -d ' ' -f 1 || true)
@@ -655,6 +655,20 @@ install_gpustack() {
     export CPLUS_INCLUDE_PATH
     LIBRARY_PATH="$(brew --prefix "$NEED_VERSION")/lib"
     export LIBRARY_PATH
+    
+    #modify file for pynini installation
+    TARGET_FILE1="$(brew --prefix "$NEED_VERSION")/opt/homebrew/opt/openfst/include/fst/fst.h
+    if [-f "$TARGET_FILE1"]; then
+        sed -i '' 's/isymbols_ = impl.isymbols_ ? impl.isymbols_->Copy() : nullptr;/isymbols_ = impl.isymbols_ ?std::make_unique<SymbolTable>(*impl.isymbols_->Copy()) : nullptr;/g' "$TARGET_FILE1"
+        sed -i '' 's/osymbols_ = impl.osymbols_ ? impl.osymbols_->Copy() : nullptr;/osymbols_ = impl.osymbols_ ? std::make_unique<SymbolTable>(*impl.osymbols_->Copy()) : nullptr;/g' "$TARGET_FILE1"
+        echo "Modified $TARGET_FILE1"
+    
+    TARGET_FILE2="$(brew --prefix "$NEED_VERSION")/opt/homebrew/opt/openfst/include/fst/fst.h
+    if [-f "$TARGET_FILE2']; then
+        sed -i '' 's/selector_(table.s_)/selector_(table.selector_)/g' "$TARGET_FILE2"
+        echo "Modified $TARGET_FILE2"
+    fi
+
     pipx inject gpustack pynini==2.1.6
     pipx inject gpustack wetextprocessing==1.0.4.1
   fi
