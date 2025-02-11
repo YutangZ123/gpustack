@@ -245,3 +245,5 @@ class Worker:
             params={"worker_id": worker.id}
         ).items:
             self._clientset.model_instances.delete(instance.id)
+
+#
