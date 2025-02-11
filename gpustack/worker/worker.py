@@ -25,7 +25,7 @@ from gpustack.worker.exporter import MetricExporter
 from gpustack.worker.logs import log_generator
 from gpustack.worker.tools_manager import ToolsManager
 from gpustack.worker.worker_manager import WorkerManager
-
+from gpustack import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +204,7 @@ class Worker:
         )
 
         setup_logging()
+        logger.info(f"GPUStack Worker Version: {__version__}")
         logger.info(f"Serving worker APIs on {config.host}:{config.port}.")
         server = uvicorn.Server(config)
 

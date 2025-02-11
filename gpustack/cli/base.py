@@ -95,6 +95,7 @@ class BaseCLIClient(ABC):
 
         self._model = self._clientset.models.create(model_create=model_create)
 
+
     def parse_hf_model(self, model: str) -> Tuple[str, str, str]:
         """
         Parse ollama style hf model like:

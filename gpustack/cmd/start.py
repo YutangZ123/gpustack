@@ -13,10 +13,9 @@ from gpustack.logging import setup_logging
 from gpustack.worker.worker import Worker
 from gpustack.config import Config
 from gpustack.server.server import Server
-
+from gpustack import __version__
 
 logger = logging.getLogger(__name__)
-
 
 class OptionalBoolAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):

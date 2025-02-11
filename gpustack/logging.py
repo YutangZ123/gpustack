@@ -1,11 +1,24 @@
 from datetime import datetime, timezone
 import logging
 import sys
+import os
 
 
 def setup_logging(debug: bool = False):
     level = logging.DEBUG if debug else logging.INFO
 
+    LOG_FILE = "/var/log/gpustack.log"
+
+    log_dir = os.path.dirname(LOG_FILE)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True) 
+
+    if not os.path.exists(LOG_FILE):
+        with open(LOG_FILE, "w") as f:
+            pass 
+
+    os.chmod(LOG_FILE, 0o644) 
+    
     logging.basicConfig(
         level=level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -68,3 +81,5 @@ class RedirectStdoutStderr:
     def __exit__(self, exc_type, exc_value, traceback):
         sys.stdout = self.original_stdout
         sys.stderr = self.original_stderr
+        
+
