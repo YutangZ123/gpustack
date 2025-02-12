@@ -12,6 +12,18 @@ class HTTPException(Exception):
         self.reason = reason
         self.message = message
 
+def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "code": exc.status_code,
+            "reason": exc.reason,
+            "message": exc.message,
+        }
+    )
+app = FastAPI()
+
+app.add_exception_handler(HTTPException, http_exception_handler)
 
 class OpenAIAPIException(HTTPException):
     pass
