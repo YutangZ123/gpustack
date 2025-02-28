@@ -77,28 +77,6 @@ async def fetch_worker(session, worker_id):
     return worker
 
 
-async def fetch_logs(client, model_instance_log_url, timeout, log_options):
-    try:
-        if log_options.follow:
-            async with client.get(model_instance_log_url, timeout=timeout) as resp:
-                if resp.status != 200:
-                    raise HTTPException(
-                        status_code=resp.status,
-                        detail=f"Error fetching serving logs: {resp.reason}",
-                    )
-                return resp
-        else:
-            async with client.get(model_instance_log_url, timeout=timeout) as resp:
-                if resp.status != 200:
-                    raise HTTPException(
-                        status_code=resp.status,
-                        detail=f"Error fetching serving logs: {resp.reason}",
-                    )
-                return resp
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
-
-
 @router.get("/{id}/logs")
 async def get_serving_logs(
     request: Request, session: SessionDep, id: int, log_options: LogOptionsDep
@@ -116,12 +94,35 @@ async def get_serving_logs(
 
     client: aiohttp.ClientSession = request.app.state.http_client
 
-    resp = await fetch_logs(client, model_instance_log_url, timeout, log_options)
+    try:
+        if log_options.follow:
 
-    if log_options.follow:
-        return StreamingResponse(resp, media_type="application/octet-stream")
-    else:
-        return PlainTextResponse(content=resp.read(), status_code=resp.status)
+            async def proxy_stream():
+                async with client.get(model_instance_log_url, timeout=timeout) as resp:
+                    if resp.status != 200:
+                        raise HTTPException(
+                            status_code=resp.status,
+                            detail="Error fetching serving logs",
+                        )
+                    async for chunk in resp.content.iter_any():
+                        yield chunk
+
+            return StreamingResponse(
+                proxy_stream(), media_type="application/octet-stream"
+            )
+
+        else:
+            async with client.get(model_instance_log_url, timeout=timeout) as resp:
+                if resp.status != 200:
+                    raise HTTPException(
+                        status_code=resp.status,
+                        detail="Error fetching serving logs",
+                    )
+                return PlainTextResponse(
+                    content=await resp.text(), status_code=resp.status
+                )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={str(e)})
 
 
 @router.post("", response_model=ModelInstancePublic)
@@ -154,7 +155,7 @@ async def update_model_instance(
     return model_instance
 
 
-@router.delete("/{id}")
+@router.delete_model("/{id}")
 async def delete_model_instance(session: SessionDep, id: int):
     model_instance = await ModelInstance.one_by_id(session, id)
     if not model_instance:

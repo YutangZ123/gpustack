@@ -4,6 +4,8 @@ import importlib
 import json
 import logging
 import math
+import os
+import shutil
 from typing import Any, AsyncGenerator, Callable, List, Optional, Union, overload, Tuple
 
 from fastapi.encoders import jsonable_encoder
@@ -443,3 +445,25 @@ class ActiveRecordMixin:
     def _format_event(event: Any) -> str:
         """Format the event as a JSON string."""
         return json.dumps(jsonable_encoder(event), separators=(",", ":")) + "\n\n"
+
+    @classmethod
+    async def delete_model_cache(cls, session: AsyncSession, id: int, cache_dir: str):
+        instance = await session.get(cls, id)
+        if instance and hasattr(instance, "deleted_at"):
+            instance.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            await instance.save(session)
+
+        async def async_remove(file_path):
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, os.remove, file_path)
+
+        async def async_rmtree(file_path):
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, shutil.rmtree, file_path)
+
+        for filename in os.listdir(cache_dir):
+            file_path = os.path.join(cache_dir, filename)
+            if os.path.isfile(file_path):
+                await async_remove(file_path)
+            elif os.path.isdir(file_path):
+                await async_rmtree(file_path)
