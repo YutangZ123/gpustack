@@ -1,6 +1,5 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-
 from gpustack.api.exceptions import (
     AlreadyExistsException,
     InternalServerErrorException,
@@ -12,6 +11,7 @@ from gpustack.schemas.workers import (
     WorkerPublic,
     WorkerUpdate,
     WorkersPublic,
+    WorkerModelDelete,
     Worker,
 )
 
@@ -94,3 +94,16 @@ async def delete_worker(session: SessionDep, id: int):
         await worker.delete(session)
     except Exception as e:
         raise InternalServerErrorException(message=f"Failed to delete worker: {e}")
+
+
+@router.get("/{id}/clear-model-cache", response_model=WorkerModelDelete)
+async def delete_model(session: SessionDep, id: int):
+    worker = await Worker.one_by_id(session, id)
+    if not worker:
+        raise NotFoundException(message="worker not found")
+    try:
+        await worker.delete_model_cache(session, id)
+    except Exception as e:
+        raise InternalServerErrorException(
+            message=f"Failed to delete worker cache directory: {e}"
+        )

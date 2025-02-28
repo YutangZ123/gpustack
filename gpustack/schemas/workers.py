@@ -57,6 +57,7 @@ class VendorEnum(str, Enum):
     Apple = "Apple"
     Huawei = "Huawei"
     AMD = "AMD"
+    Hygon = "Hygon"
 
 
 class MountPoint(BaseModel):
@@ -194,6 +195,10 @@ class WorkerPublic(
     id: int
     created_at: datetime
     updated_at: datetime
+
+
+class WorkerModelDelete(WorkerBase):
+    pass
 
 
 WorkersPublic = PaginatedList[WorkerPublic]
