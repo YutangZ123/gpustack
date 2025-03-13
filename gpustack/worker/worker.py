@@ -14,6 +14,7 @@ from gpustack.config import Config
 from gpustack.routes import debug, probes
 from gpustack.schemas.workers import SystemReserved, WorkerUpdate
 from gpustack.server import catalog
+from gpustack.ray.manager import RayManager
 from gpustack.utils import file, platform
 from gpustack.utils.network import get_first_non_loopback_ip
 from gpustack.client import ClientSet
@@ -32,14 +33,16 @@ logger = logging.getLogger(__name__)
 
 
 class Worker:
-    def __init__(self, cfg: Config):
+    def __init__(self, cfg: Config, is_embedded: bool = False):
         self._config = cfg
+        self._is_embedded = is_embedded
         self._log_dir = cfg.log_dir
         self._address = "0.0.0.0"
         self._port = cfg.worker_port
         self._exporter_enabled = not cfg.disable_metrics
         self._enable_worker_ip_monitor = False
         self._system_reserved = SystemReserved(ram=0, vram=0)
+        self._async_tasks = []
 
         if cfg.system_reserved is not None:
             # GB to Bytes
@@ -92,6 +95,7 @@ class Worker:
             clientset=self._clientset,
             cfg=cfg,
         )
+        self._ray_manager = RayManager(cfg=cfg)
 
     def _get_worker_name(self):
         # Hostname might change with the network, so we store the worker name in a file.
@@ -108,10 +112,13 @@ class Worker:
 
         return worker_name
 
-    def start(self, is_multiprocessing=False):
+    def _create_async_task(self, coro):
+        self._async_tasks.append(asyncio.create_task(coro))
+
+    def start(self):
         setup_logging(self._config.debug)
 
-        if is_multiprocessing:
+        if self._is_embedded:
             setproctitle.setproctitle("gpustack_worker")
 
         tools_manager = ToolsManager(
@@ -167,10 +174,19 @@ class Worker:
             self._serve_manager.health_check_serving_instances, 3
         )
 
-        asyncio.create_task(self._serve_manager.watch_model_instances())
+        self._create_async_task(self._serve_manager.watch_model_instances())
+
+        if self._config.enable_ray and not self._is_embedded:
+            # Embedded worker does not start Ray.
+            # Ray does not support starting pure head,
+            # and we don't want to start Ray head and worker on the same node.
+            # Ref: https://github.com/ray-project/ray/issues/19745.
+            self._create_async_task(self._ray_manager.start())
 
         # Start the worker server to expose APIs.
-        await self._serve_apis()
+        self._create_async_task(self._serve_apis())
+
+        await asyncio.gather(*self._async_tasks)
 
     async def _serve_apis(self):
         """

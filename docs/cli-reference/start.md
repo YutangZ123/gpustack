@@ -15,14 +15,17 @@ gpustack start [OPTIONS]
 
 ### Common Options
 
-| <div style="width:180px">Flag</div> | <div style="width:100px">Default</div> | Description                                                                                                                           |
-| ----------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `--config-file` value               | (empty)                                | Path to the YAML config file.                                                                                                         |
-| `-d` value, `--debug` value         | `False`                                | To enable debug mode, the short flag -d is not supported in Windows because this flag is reserved by PowerShell for CommonParameters. |
-| `--data-dir` value                  | (empty)                                | Directory to store data. Default is OS specific.                                                                                      |
-| `--cache-dir` value                 | (empty)                                | Directory to store cache (e.g., model files). Defaults to <data-dir>/cache.                                                           |
-| `-t` value, `--token` value         | Auto-generated.                        | Shared secret used to add a worker.                                                                                                   |
-| `--huggingface-token` value         | (empty)                                | User Access Token to authenticate to the Hugging Face Hub. Can also be configured via the `HF_TOKEN` environment variable.            |
+| <div style="width:180px">Flag</div> | <div style="width:100px">Default</div> | Description                                                                                                                                                                                                                                                                                           |
+| ----------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--config-file` value               | (empty)                                | Path to the YAML config file.                                                                                                                                                                                                                                                                         |
+| `-d` value, `--debug` value         | `False`                                | To enable debug mode, the short flag -d is not supported in Windows because this flag is reserved by PowerShell for CommonParameters.                                                                                                                                                                 |
+| `--data-dir` value                  | (empty)                                | Directory to store data. Default is OS specific.                                                                                                                                                                                                                                                      |
+| `--cache-dir` value                 | (empty)                                | Directory to store cache (e.g., model files). Defaults to <data-dir>/cache.                                                                                                                                                                                                                           |
+| `-t` value, `--token` value         | Auto-generated.                        | Shared secret used to add a worker.                                                                                                                                                                                                                                                                   |
+| `--huggingface-token` value         | (empty)                                | User Access Token to authenticate to the Hugging Face Hub. Can also be configured via the `HF_TOKEN` environment variable.                                                                                                                                                                            |
+| `--ollama-library-base-url` value   | `https://registry.ollama.ai`           | Base URL for the Ollama library.                                                                                                                                                                                                                                                                      |
+| `--enable-ray`                      | `False`                                | Enable Ray for running distributed vLLM across multiple workers. Only supported on Linux.                                                                                                                                                                                                             |
+| `--ray-args` value                  | (empty)                                | Arguments to pass to Ray. Use `=` to avoid the CLI recognizing ray-args as a GPUStack argument. This can be used multiple times to pass a list of arguments. Example: `--ray-args=--port=6379 --ray-args=--verbose`. See [Ray docs](https://docs.ray.io/en/latest/cluster/cli.html) for more details. |
 
 ### Server Options
 
@@ -36,7 +39,6 @@ gpustack start [OPTIONS]
 | `--ssl-keyfile` value               | (empty)                                | Path to the SSL key file.                                                                                                                           |
 | `--ssl-certfile` value              | (empty)                                | Path to the SSL certificate file.                                                                                                                   |
 | `--force-auth-localhost`            | `False`                                | Force authentication for requests originating from localhost (127.0.0.1).When set to True, all requests from localhost will require authentication. |
-| `--ollama-library-base-url`         | `https://registry.ollama.ai`           | Base URL for the Ollama library.                                                                                                                    |
 | `--disable-update-check`            | `False`                                | Disable update check.                                                                                                                               |
 | `--model-catalog-file` value        | (empty)                                | Path or URL to the model catalog file.                                                                                                              |
 
@@ -76,6 +78,9 @@ debug: false
 data_dir: /path/to/data_dir
 cache_dir: /path/to/cache_dir
 token: mytoken
+ollama_library_base_url: https://registry.mycompany.com
+enable_ray: false
+ray_args: ["--port=6379", "--verbose"]
 
 # Server Options
 host: 0.0.0.0
@@ -86,7 +91,6 @@ ssl_keyfile: /path/to/keyfile
 ssl_certfile: /path/to/certfile
 force_auth_localhost: false
 bootstrap_password: myadminpassword
-ollama_library_base_url: https://registry.mycompany.com
 disable_update_check: false
 model_catalog_file: /path_or_url/to/model_catalog_file
 
